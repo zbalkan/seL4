@@ -45,6 +45,7 @@ config_choice(
     "rpi3;KernelPlatformRpi3;PLAT_BCM2837;KernelArchARM"
     "tx1;KernelPlatformTx1;PLAT_TX1;KernelSel4ArchAarch64"
     "tx2;KernelPlatformTx2;PLAT_TX2;KernelSel4ArchAarch64"
+    "imx8qm;KernelPlatformImx8qm;PLAT_IMX8QM;KernelArchARM"
 )
 
 if(KernelArchARM)
@@ -86,6 +87,7 @@ set(KernelArmPASizeBits44 OFF)
 include(src/plat/allwinnerA20/config.cmake)
 include(src/plat/imx6/config.cmake)
 include(src/plat/imx7/config.cmake)
+include(src/plat/imx8qm/config.cmake)
 include(src/plat/imx31/config.cmake)
 include(src/plat/omap3/config.cmake)
 include(src/plat/exynos4/config.cmake)

@@ -39,3 +39,4 @@ register_driver(
     CFILES "msm-uartdm.c"
 )
 register_driver(compatibility_strings "xlnx,xuartps" PREFIX src/drivers/serial CFILES "xuartps.c")
+register_driver(compatibility_strings "fsl,imx8qm-lpuart" CFILES src/drivers/serial/imx8qm-lpuart.c)
