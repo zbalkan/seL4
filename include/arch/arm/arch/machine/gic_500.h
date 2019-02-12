@@ -202,7 +202,7 @@ extern uint32_t active_irq[CONFIG_MAX_NUM_NODES];
 
 static inline int irq_is_ppi(irq_t irq)
 {
-        return (irq < 32);
+    return (irq < 32);
 }
 
 /* Helpers */
@@ -221,13 +221,10 @@ dist_pending_clr(irq_t irq)
     int bit = IRQ_BIT(irq);
     /* Using |= here is detrimental to your health */
     /* Applicable for SPI and PPIs */
-    if(irq_is_ppi(irq))
-    {
-      gic_rdist_sgi_ppi->icpendr0 = BIT(bit);
-    }
-    else
-    {
-      gic_dist->pending_clr[word] = BIT(bit);
+    if (irq_is_ppi(irq)) {
+        gic_rdist_sgi_ppi->icpendr0 = BIT(bit);
+    } else {
+        gic_dist->pending_clr[word] = BIT(bit);
     }
 }
 
@@ -237,13 +234,10 @@ dist_enable_clr(irq_t irq)
     int word = IRQ_REG(irq);
     int bit = IRQ_BIT(irq);
     /* Using |= here is detrimental to your health */
-    if(irq_is_ppi(irq))
-    {
-      gic_rdist_sgi_ppi->icenabler0 = BIT(bit);
-    }
-    else
-    {
-      gic_dist->enable_clr[word] = BIT(bit);
+    if (irq_is_ppi(irq)) {
+        gic_rdist_sgi_ppi->icenabler0 = BIT(bit);
+    } else {
+        gic_dist->enable_clr[word] = BIT(bit);
     }
 
 }
@@ -254,13 +248,10 @@ dist_enable_set(irq_t irq)
     int word = IRQ_REG(irq);
     int bit = IRQ_BIT(irq);
 
-    if(irq_is_ppi(irq))
-    {
-      gic_rdist_sgi_ppi->isenabler0 = BIT(bit);
-    }
-    else
-    {
-      gic_dist->enable_set[word] = BIT(bit);
+    if (irq_is_ppi(irq)) {
+        gic_rdist_sgi_ppi->isenabler0 = BIT(bit);
+    } else {
+        gic_dist->enable_set[word] = BIT(bit);
     }
 
 }

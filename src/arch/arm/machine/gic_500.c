@@ -43,39 +43,35 @@ volatile struct gic_rdist_sgi_ppi_map * const gic_rdist_sgi_ppi =
 
 uint32_t active_irq[CONFIG_MAX_NUM_NODES] = {IRQ_NONE};
 
- /* Wait for completion of a distributor change */
+/* Wait for completion of a distributor change */
 static uint32_t gicv3_do_wait_for_rwp(volatile uint32_t *ctlr_addr)
- {
-     uint32_t val;
-     bool_t waiting = true;
-     uint32_t ret = 0;
+{
+    uint32_t val;
+    bool_t waiting = true;
+    uint32_t ret = 0;
 
-     uint32_t gpt_cnt_tval = 0;
-     uint32_t deadline_ms =  GIC_DEADLINE_MS;
-     uint32_t gpt_cnt_ciel;
-     SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
-     gpt_cnt_ciel = gpt_cnt_tval + (deadline_ms * TICKS_PER_MS);
+    uint32_t gpt_cnt_tval = 0;
+    uint32_t deadline_ms =  GIC_DEADLINE_MS;
+    uint32_t gpt_cnt_ciel;
+    SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
+    gpt_cnt_ciel = gpt_cnt_tval + (deadline_ms * TICKS_PER_MS);
 
-     while(waiting)
-     {
-         SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
-         val = *ctlr_addr;
+    while (waiting) {
+        SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
+        val = *ctlr_addr;
 
-         if(gpt_cnt_tval >= gpt_cnt_ciel)
-         {
-             printf("GICV3 RWP Timeout after %u ms\n", deadline_ms);
-             ret = 1;
-             waiting = false;
+        if (gpt_cnt_tval >= gpt_cnt_ciel) {
+            printf("GICV3 RWP Timeout after %u ms\n", deadline_ms);
+            ret = 1;
+            waiting = false;
 
-         }
-         else if (!(val & GICD_CTLR_RWP))
-         {
-             ret = 0;
-             waiting = false;
-         }
-     }
-     return ret;
- }
+        } else if (!(val & GICD_CTLR_RWP)) {
+            ret = 0;
+            waiting = false;
+        }
+    }
+    return ret;
+}
 
 static void gicv3_dist_wait_for_rwp(void)
 {
@@ -99,214 +95,200 @@ static void gicv3_enable_sre(void)
     isb();
 }
 
- BOOT_CODE static void
- dist_init(void)
- {
-     word_t i;
-     uint32_t type;
-     unsigned int nr_lines;
-     uint64_t affinity;
 
-     /* Disable GIC Distributor */
-     gic_dist->ctlr = 0;
-     type = gic_dist->typer;
+BOOT_CODE static void
+dist_init(void)
+{
+    word_t i;
+    uint32_t type;
+    unsigned int nr_lines;
+    uint64_t affinity;
 
-     nr_lines = GIC_REG_WIDTH * ((type & GICD_TYPE_LINESNR) + 1);
+    /* Disable GIC Distributor */
+    gic_dist->ctlr = 0;
+    type = gic_dist->typer;
 
-     for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 16 )
-     {
-       gic_dist->config[(i/16)] = 0;
-     }
+    nr_lines = GIC_REG_WIDTH * ((type & GICD_TYPE_LINESNR) + 1);
 
-     /* Default priority for global interrupts */
-     for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 4 )
-     {
-       if (config_set(CONFIG_ARM_HYPERVISOR_SUPPORT))
-       {
-         gic_dist->priority[(i/4)] = 0x80808080;
-       }
-       else
-       {
-         gic_dist->priority[(i/4)] = 0x0;
-       }
-     }
-     /* Disable and clear all global interrupts */
-     for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 32 )
-     {
-       gic_dist->enable_clr[(i/32)] = IRQ_SET_ALL;
-       gic_dist->pending_clr[(i/32)] = IRQ_SET_ALL;
-     }
+    for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 16 ) {
+        gic_dist->config[(i / 16)] = 0;
+    }
 
-     gicv3_dist_wait_for_rwp();
-     /* Turn on the distributor */
-     gic_dist->ctlr = GICD_CTL_ENABLE | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1NS | GICD_CTLR_ENABLE_G0;
+    /* Default priority for global interrupts */
+    for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 4 ) {
+        if (config_set(CONFIG_ARM_HYPERVISOR_SUPPORT)) {
+            gic_dist->priority[(i / 4)] = 0x80808080;
+        } else {
+            gic_dist->priority[(i / 4)] = 0x0;
+        }
+    }
+    /* Disable and clear all global interrupts */
+    for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 32 ) {
+        gic_dist->enable_clr[(i / 32)] = IRQ_SET_ALL;
+        gic_dist->pending_clr[(i / 32)] = IRQ_SET_ALL;
+    }
 
-     /* Route all global IRQs to this CPU */
-     SYSTEM_READ_WORD("mpidr_el1", affinity);
-     /* Mask cpu affinity part */
-     affinity &= 0xFFFFFF;
-     /* Make sure we don't broadcast the interrupt */
-     affinity &= ~GICD_IROUTER_SPI_MODE_ANY;
+    gicv3_dist_wait_for_rwp();
+    /* Turn on the distributor */
+    gic_dist->ctlr = GICD_CTL_ENABLE | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1NS | GICD_CTLR_ENABLE_G0;
 
-     for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i++ )
-     {
-       gic_dist->irouter[i] = affinity;
-     }
- }
+    /* Route all global IRQs to this CPU */
+    SYSTEM_READ_WORD("mpidr_el1", affinity);
+    /* Mask cpu affinity part */
+    affinity &= 0xFFFFFF;
+    /* Make sure we don't broadcast the interrupt */
+    affinity &= ~GICD_IROUTER_SPI_MODE_ANY;
+
+    for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i++ ) {
+        gic_dist->irouter[i] = affinity;
+    }
+}
 
 static int gicv3_enable_redist(void)
 {
-     uint32_t val;
-     bool_t waiting = true;
-     uint32_t ret = 0;
-     uint32_t gpt_cnt_tval = 0;
-     uint32_t deadline_ms = GIC_DEADLINE_MS;
-     uint32_t gpt_cnt_ciel;
-     SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
-     gpt_cnt_ciel = gpt_cnt_tval + (deadline_ms * TICKS_PER_MS);
-     /* Wake up this CPU redistributor */
-     val = gic_rdist->waker;
-     val &= ~GICR_WAKER_ProcessorSleep;
-     gic_rdist->waker = val;
-     while(waiting)
-     {
-         SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
-         val = gic_rdist->waker;
-         if(gpt_cnt_tval >= gpt_cnt_ciel)
-         {
-             printf("GICV3 Re-distributor enable Timeout after %u ms\n", deadline_ms);
-             ret = 1;
-             waiting = false;
-         }
-         else if (!(val & GICR_WAKER_ChildrenAsleep))
-         {
-             ret = 0;
-             waiting = false;
-         }
-     }
-     return ret;
+    uint32_t val;
+    bool_t waiting = true;
+    uint32_t ret = 0;
+    uint32_t gpt_cnt_tval = 0;
+    uint32_t deadline_ms = GIC_DEADLINE_MS;
+    uint32_t gpt_cnt_ciel;
+    SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
+    gpt_cnt_ciel = gpt_cnt_tval + (deadline_ms * TICKS_PER_MS);
+    /* Wake up this CPU redistributor */
+    val = gic_rdist->waker;
+    val &= ~GICR_WAKER_ProcessorSleep;
+    gic_rdist->waker = val;
+    while (waiting) {
+        SYSTEM_READ_WORD(CNTFRQ, gpt_cnt_tval);
+        val = gic_rdist->waker;
+        if (gpt_cnt_tval >= gpt_cnt_ciel) {
+            printf("GICV3 Re-distributor enable Timeout after %u ms\n", deadline_ms);
+            ret = 1;
+            waiting = false;
+        } else if (!(val & GICR_WAKER_ChildrenAsleep)) {
+            ret = 0;
+            waiting = false;
+        }
+    }
+    return ret;
 }
 
 static int gicv3_populate_rdist(void)
 {
-     uint64_t aff;
-     uint32_t reg;
-     uint64_t typer;
+    uint64_t aff;
+    uint32_t reg;
+    uint64_t typer;
 
-     SYSTEM_READ_WORD("mpidr_el1", aff);
-     // Mask MPIDR to just show the register that code is runnig on
-     aff &= 0xFFFFFF;
+    SYSTEM_READ_WORD("mpidr_el1", aff);
+    // Mask MPIDR to just show the register that code is runnig on
+    aff &= 0xFFFFFF;
 
-     reg = gic_rdist->pidr2 & GIC_PIDR2_ARCH_MASK;
-     if ( reg != GIC_PIDR2_ARCH_GICv3 && reg != GIC_PIDR2_ARCH_GICv4 )
-     {
-         printf("GICv3: CPU0: has no re-distributor!\n");
-         return 1;
-     }
+    reg = gic_rdist->pidr2 & GIC_PIDR2_ARCH_MASK;
+    if ( reg != GIC_PIDR2_ARCH_GICv3 && reg != GIC_PIDR2_ARCH_GICv4 ) {
+        printf("GICv3: CPU0: has no re-distributor!\n");
+        return 1;
+    }
 
-     typer = gic_rdist->typer;
-     /* Compare the affinity bits of GICR_TYPER to the affinity of the current processor */
-     if ( (typer >> 32) == aff )
-     {
-         printf("GICv3: CPU%llu: Found redistributor at addr: %p\n", aff, gic_rdist);
-         return 0;
-     }
+    typer = gic_rdist->typer;
+    /* Compare the affinity bits of GICR_TYPER to the affinity of the current processor */
+    if ( (typer >> 32) == aff ) {
+        printf("GICv3: CPU%llu: Found redistributor at addr: %p\n", aff, gic_rdist);
+        return 0;
+    }
 
-     printf("GICv3: CPU%llu: has no re-distributor!\n", aff);
+    printf("GICv3: CPU%llu: has no re-distributor!\n", aff);
 
-     return 1;
+    return 1;
 }
 
 BOOT_CODE static void
 cpu_iface_init(void)
 {
-     int i;
-     uint32_t priority;
+    int i;
+    uint32_t priority;
 
-     /* Register ourselves with the rest of the world */
-     if ( gicv3_populate_rdist() ) {
-         return;
-     }
+    /* Register ourselves with the rest of the world */
+    if ( gicv3_populate_rdist() ) {
+        return;
+    }
 
-     if ( gicv3_enable_redist() ) {
-         return;
-     }
+    if ( gicv3_enable_redist() ) {
+        return;
+    }
 
-     /* Set priority on PPI and SGI interrupts */
-     priority = (GIC_PRI_IPI << 24 | GIC_PRI_IPI << 16 | GIC_PRI_IPI << 8 |
-                 GIC_PRI_IPI);
-     for (i = 0; i < NR_GIC_SGI; i += 4)
-     {
-       gic_rdist_sgi_ppi->ipriorityrn[i/4] = priority;
-     }
+    /* Set priority on PPI and SGI interrupts */
+    priority = (GIC_PRI_IPI << 24 | GIC_PRI_IPI << 16 | GIC_PRI_IPI << 8 |
+                GIC_PRI_IPI);
+    for (i = 0; i < NR_GIC_SGI; i += 4) {
+        gic_rdist_sgi_ppi->ipriorityrn[i / 4] = priority;
+    }
 
-     priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
-                 GIC_PRI_IRQ);
-     for (i = 0; i < NR_GIC_LOCAL_IRQS; i += 4)
-     {
-       gic_rdist_sgi_ppi->ipriorityrn[i/4] = priority;
-     }
+    priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
+                GIC_PRI_IRQ);
+    for (i = 0; i < NR_GIC_LOCAL_IRQS; i += 4) {
+        gic_rdist_sgi_ppi->ipriorityrn[i / 4] = priority;
+    }
 
-     /*
-      * Disable all PPI interrupts, ensure all SGI interrupts are
-      * enabled.
-      */
-     gic_rdist_sgi_ppi->icenabler0 = 0xffff0000;
-     gic_rdist_sgi_ppi->icenabler0 = 0x0000ffff;
+    /*
+     * Disable all PPI interrupts, ensure all SGI interrupts are
+     * enabled.
+     */
+    gic_rdist_sgi_ppi->icenabler0 = 0xffff0000;
+    gic_rdist_sgi_ppi->icenabler0 = 0x0000ffff;
 
-     gicv3_redist_wait_for_rwp();
+    gicv3_redist_wait_for_rwp();
 
-     /* Enable system registers */
-     gicv3_enable_sre();
+    /* Enable system registers */
+    gicv3_enable_sre();
 
-     /* No priority grouping: ICC_BPR1_EL1 */
-     MSR("S3_0_C12_C12_3", 0);
+    /* No priority grouping: ICC_BPR1_EL1 */
+    MSR("S3_0_C12_C12_3", 0);
 
-     /* Set priority mask register: ICC_PMR_EL1 */
-     MSR("S3_0_C4_C6_0", DEFAULT_PMR_VALUE);
+    /* Set priority mask register: ICC_PMR_EL1 */
+    MSR("S3_0_C4_C6_0", DEFAULT_PMR_VALUE);
 
-     /* EOI drops priority, DIR deactivates the interrupt (mode 1): ICC_CTLR_EL1 */
-     MSR("S3_0_C12_C12_4", GICC_CTLR_EL1_EOImode_drop);
+    /* EOI drops priority, DIR deactivates the interrupt (mode 1): ICC_CTLR_EL1 */
+    MSR("S3_0_C12_C12_4", GICC_CTLR_EL1_EOImode_drop);
 
-     /* Enable Group1 interrupts: ICC_IGRPEN1_EL1 */
-     MSR("S3_0_C12_C12_7", 1);
+    /* Enable Group1 interrupts: ICC_IGRPEN1_EL1 */
+    MSR("S3_0_C12_C12_7", 1);
 
-     /* Sync at once at the end of cpu interface configuration */
-     isb();
+    /* Sync at once at the end of cpu interface configuration */
+    isb();
 }
 
- BOOT_CODE void
- initIRQController(void)
- {
-     dist_init();
- }
+BOOT_CODE void
+initIRQController(void)
+{
+    dist_init();
+}
 
- BOOT_CODE void cpu_initLocalIRQController(void)
- {
-     cpu_iface_init();
- }
+BOOT_CODE void cpu_initLocalIRQController(void)
+{
+    cpu_iface_init();
+}
 
- #ifdef ENABLE_SMP_SUPPORT
- /*
- * 25-24: target lister filter
- * 0b00 - send the ipi to the CPU interfaces specified in the CPU target list
- * 0b01 - send the ipi to all CPU interfaces except the cpu interface.
- *        that requrested teh ipi
- * 0b10 - send the ipi only to the CPU interface that requested the IPI.
- * 0b11 - reserved
- *.
- * 23-16: CPU targets list
- * each bit of CPU target list [7:0] refers to the corresponding CPU interface.
- * 3-0:   SGIINTID
- * software generated interrupt id, from 0 to 15...
- */
- void ipiBroadcast(irq_t irq, bool_t includeSelfCPU)
- {
-     gic_dist->sgi_control = (!includeSelfCPU << GICD_SGIR_TARGETLISTFILTER_SHIFT) | (irq << GICD_SGIR_SGIINTID_SHIFT);
- }
+#ifdef ENABLE_SMP_SUPPORT
+/*
+* 25-24: target lister filter
+* 0b00 - send the ipi to the CPU interfaces specified in the CPU target list
+* 0b01 - send the ipi to all CPU interfaces except the cpu interface.
+*        that requrested teh ipi
+* 0b10 - send the ipi only to the CPU interface that requested the IPI.
+* 0b11 - reserved
+*.
+* 23-16: CPU targets list
+* each bit of CPU target list [7:0] refers to the corresponding CPU interface.
+* 3-0:   SGIINTID
+* software generated interrupt id, from 0 to 15...
+*/
+void ipiBroadcast(irq_t irq, bool_t includeSelfCPU)
+{
+    gic_dist->sgi_control = (!includeSelfCPU << GICD_SGIR_TARGETLISTFILTER_SHIFT) | (irq << GICD_SGIR_SGIINTID_SHIFT);
+}
 
- void ipi_send_target(irq_t irq, word_t cpuTargetList)
- {
-     gic_dist->sgi_control = (cpuTargetList << GICD_SGIR_CPUTARGETLIST_SHIFT) | (irq << GICD_SGIR_SGIINTID_SHIFT);
- }
- #endif /* ENABLE_SMP_SUPPORT */
+void ipi_send_target(irq_t irq, word_t cpuTargetList)
+{
+    gic_dist->sgi_control = (cpuTargetList << GICD_SGIR_CPUTARGETLIST_SHIFT) | (irq << GICD_SGIR_SGIINTID_SHIFT);
+}
+#endif /* ENABLE_SMP_SUPPORT */
