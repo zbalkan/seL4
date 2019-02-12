@@ -14,13 +14,6 @@
 #include <types.h>
 #include <arch/machine/gic_500.h>
 
-#define TARGET_CPU_ALLINT(CPU) ( \
-        ( ((CPU)&0xff)<<0u  ) |\
-        ( ((CPU)&0xff)<<8u  ) |\
-        ( ((CPU)&0xff)<<16u ) |\
-        ( ((CPU)&0xff)<<24u ) \
-    )
-#define TARGET_CPU0_ALLINT   TARGET_CPU_ALLINT(BIT(0))
 #define IRQ_SET_ALL 0xffffffff;
 
 #define RDIST_BANK_SZ 0x00010000
