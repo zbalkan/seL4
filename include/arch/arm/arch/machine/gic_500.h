@@ -80,6 +80,17 @@ enum irqNumbers {
        asm volatile("msr " reg ",%0" :: "r" (_v));\
    }while(0)
 
+/* System registers for GIC CPU interface */
+#define ICC_IAR1_EL1    "S3_0_C12_C12_0"
+#define ICC_EOIR1_EL1   "S3_0_C12_C12_1"
+#define ICC_HPPIR1_EL1  "S3_0_C12_C12_2"
+#define ICC_BPR1_EL1    "S3_0_C12_C12_3"
+#define ICC_DIR_EL1     "S3_0_C12_C11_1"
+#define ICC_PMR_EL1     "S3_0_C4_C6_0"
+#define ICC_CTLR_EL1    "S3_0_C12_C12_4"
+#define ICC_IGRPEN1_EL1 "S3_0_C12_C12_7"
+#define ICC_SRE_EL1     "S3_0_C12_C12_5"
+
 /* Memory map for GIC distributor */
 struct gic_dist_map {
     uint32_t ctlr;                /* 0x0000 */
@@ -263,7 +274,7 @@ getActiveIRQ(void)
 
     if (!IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
         uint32_t val;
-        MRS("S3_0_C12_C12_0", val);
+        MRS(ICC_IAR1_EL1, val);
         active_irq[CURRENT_CPU_INDEX()] = val;
     }
 
@@ -286,7 +297,7 @@ isIRQPending(void)
 {
     uint32_t val;
     /* Check for pending IRQs in group 1: ICC_HPPIR1_EL1 */
-    MRS("S3_0_C12_C12_2", val);
+    MRS(ICC_HPPIR1_EL1, val);
     return IS_IRQ_VALID(val);
 }
 
@@ -309,8 +320,8 @@ ackInterrupt(irq_t irq)
     }
 
     /* Set End of Interrupt for active IRQ: ICC_EOIR1_EL1 */
-    MSR("S3_0_C12_C12_1", active_irq[CURRENT_CPU_INDEX()]);
-    MSR("S3_0_C12_C11_1", active_irq[CURRENT_CPU_INDEX()]);
+    MSR(ICC_EOIR1_EL1, active_irq[CURRENT_CPU_INDEX()]);
+    MSR(ICC_DIR_EL1, active_irq[CURRENT_CPU_INDEX()]);
     active_irq[CURRENT_CPU_INDEX()] = IRQ_NONE;
 
 }

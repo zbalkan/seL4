@@ -88,10 +88,10 @@ static void gicv3_enable_sre(void)
     uint32_t val;
 
     /* ICC_SRE_EL1 */
-    MRS("S3_0_C12_C12_5", val);
+    MRS(ICC_SRE_EL1, val);
     val |= GICC_SRE_EL1_SRE;
 
-    MSR("S3_0_C12_C12_5", val);
+    MSR(ICC_SRE_EL1, val);
     isb();
 }
 
@@ -242,16 +242,16 @@ cpu_iface_init(void)
     gicv3_enable_sre();
 
     /* No priority grouping: ICC_BPR1_EL1 */
-    MSR("S3_0_C12_C12_3", 0);
+    MSR(ICC_BPR1_EL1, 0);
 
     /* Set priority mask register: ICC_PMR_EL1 */
-    MSR("S3_0_C4_C6_0", DEFAULT_PMR_VALUE);
+    MSR(ICC_PMR_EL1, DEFAULT_PMR_VALUE);
 
     /* EOI drops priority, DIR deactivates the interrupt (mode 1): ICC_CTLR_EL1 */
-    MSR("S3_0_C12_C12_4", GICC_CTLR_EL1_EOImode_drop);
+    MSR(ICC_CTLR_EL1, GICC_CTLR_EL1_EOImode_drop);
 
     /* Enable Group1 interrupts: ICC_IGRPEN1_EL1 */
-    MSR("S3_0_C12_C12_7", 1);
+    MSR(ICC_IGRPEN1_EL1, 1);
 
     /* Sync at once at the end of cpu interface configuration */
     isb();
