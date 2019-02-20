@@ -39,6 +39,12 @@ enum irqNumbers {
 #define NR_GIC_LOCAL_IRQS  32
 #define NR_GIC_SGI         16
 
+#define GIC_SGI_START            (0)
+#define GIC_SGI_END              (15)
+#define GIC_PPI_START            (16)
+#define GIC_PPI_END              (31)
+
+
 #define GIC_PRI_LOWEST     0xf0
 #define GIC_PRI_IRQ        0xa0
 #define GIC_PRI_IPI        0x90 /* IPIs must preempt normal interrupts */
@@ -205,18 +211,35 @@ extern volatile struct gic_rdist_sgi_ppi_map * const gic_rdist_sgi_ppi;
  */
 extern uint32_t active_irq[CONFIG_MAX_NUM_NODES];
 
-static inline int irq_is_ppi(irq_t irq)
+
+static inline bool_t is_sgi(irq_t irq)
 {
-    return (irq < 32);
+    return (irq >= GIC_SGI_START) && (irq <= GIC_SGI_END);
+}
+
+static inline bool_t is_ppi(irq_t irq)
+{
+    return (irq >= GIC_PPI_START) && (irq <= GIC_PPI_END);
 }
 
 /* Helpers */
 static inline int
 is_irq_edge_triggered(irq_t irq)
 {
+    uint32_t icfgr = 0;
     int word = irq >> 4;
     int bit = ((irq & 0xf) * 2);
-    return !!(gic_dist->config[word] & BIT(bit + 1));
+
+    if (is_sgi(irq)) {
+        return 0;
+    }
+    if (is_ppi(irq)) {
+        icfgr = gic_rdist_sgi_ppi->icfgrn_rw;
+    } else {
+        icfgr = gic_dist->config[word];
+    }
+
+    return !!(icfgr & BIT(bit + 1));
 }
 
 static inline void
@@ -226,7 +249,7 @@ dist_pending_clr(irq_t irq)
     int bit = IRQ_BIT(irq);
     /* Using |= here is detrimental to your health */
     /* Applicable for SPI and PPIs */
-    if (irq_is_ppi(irq)) {
+    if (irq < NR_GIC_LOCAL_IRQS) {
         gic_rdist_sgi_ppi->icpendr0 = BIT(bit);
     } else {
         gic_dist->pending_clr[word] = BIT(bit);
@@ -239,7 +262,7 @@ dist_enable_clr(irq_t irq)
     int word = IRQ_REG(irq);
     int bit = IRQ_BIT(irq);
     /* Using |= here is detrimental to your health */
-    if (irq_is_ppi(irq)) {
+    if (irq < NR_GIC_LOCAL_IRQS) {
         gic_rdist_sgi_ppi->icenabler0 = BIT(bit);
     } else {
         gic_dist->enable_clr[word] = BIT(bit);
@@ -253,7 +276,7 @@ dist_enable_set(irq_t irq)
     int word = IRQ_REG(irq);
     int bit = IRQ_BIT(irq);
 
-    if (irq_is_ppi(irq)) {
+    if (irq < NR_GIC_LOCAL_IRQS) {
         gic_rdist_sgi_ppi->isenabler0 = BIT(bit);
     } else {
         gic_dist->enable_set[word] = BIT(bit);
