@@ -261,14 +261,14 @@ getActiveIRQ(void)
 {
     uint32_t irq;
 
-    if (!IS_IRQ_VALID(active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)])) {
+    if (!IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
         uint32_t val;
         MRS("S3_0_C12_C12_0", val);
-        active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)] = val;
+        active_irq[CURRENT_CPU_INDEX()] = val;
     }
 
-    if (IS_IRQ_VALID(active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)])) {
-        irq = active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)] & IRQ_MASK;
+    if (IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
+        irq = active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK;
     } else {
         irq = irqInvalid;
     }
@@ -303,15 +303,15 @@ maskInterrupt(bool_t disable, interrupt_t irq)
 static inline void
 ackInterrupt(irq_t irq)
 {
-    assert(IS_IRQ_VALID(active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)]) && (active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)] & IRQ_MASK) == irq);
+    assert(IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()]) && (active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK) == irq);
     if (is_irq_edge_triggered(irq)) {
         dist_pending_clr(irq);
     }
 
     /* Set End of Interrupt for active IRQ: ICC_EOIR1_EL1 */
-    MSR("S3_0_C12_C12_1", active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)]);
-    MSR("S3_0_C12_C11_1", active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)]);
-    active_irq[SMP_TERNARY(getCurrentCPUIndex(), 0)] = IRQ_NONE;
+    MSR("S3_0_C12_C12_1", active_irq[CURRENT_CPU_INDEX()]);
+    MSR("S3_0_C12_C11_1", active_irq[CURRENT_CPU_INDEX()]);
+    active_irq[CURRENT_CPU_INDEX()] = IRQ_NONE;
 
 }
 
