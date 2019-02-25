@@ -254,6 +254,7 @@ gicr_init(void)
 BOOT_CODE static void
 cpu_iface_init(void)
 {
+    uint32_t icc_ctlr = 0;
 
     /* Enable system registers */
     gicv3_enable_sre();
@@ -264,8 +265,10 @@ cpu_iface_init(void)
     /* Set priority mask register: ICC_PMR_EL1 */
     SYSTEM_WRITE_WORD(ICC_PMR_EL1, DEFAULT_PMR_VALUE);
 
-    /* EOI drops priority, DIR deactivates the interrupt (mode 1): ICC_CTLR_EL1 */
-    SYSTEM_WRITE_WORD(ICC_CTLR_EL1, GICC_CTLR_EL1_EOImode_drop);
+    /* EOI drops priority and deactivates the interrupt: ICC_CTLR_EL1 */
+    SYSTEM_READ_WORD(ICC_CTLR_EL1, icc_ctlr);
+    icc_ctlr &= ~BIT(GICC_CTLR_EL1_EOImode_drop);
+    SYSTEM_WRITE_WORD(ICC_CTLR_EL1, icc_ctlr);
 
     /* Enable Group1 interrupts: ICC_IGRPEN1_EL1 */
     SYSTEM_WRITE_WORD(ICC_IGRPEN1_EL1, 1);

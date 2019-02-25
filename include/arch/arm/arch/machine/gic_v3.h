@@ -315,7 +315,6 @@ ackInterrupt(irq_t irq)
 
     /* Set End of Interrupt for active IRQ: ICC_EOIR1_EL1 */
     SYSTEM_WRITE_WORD(ICC_EOIR1_EL1, active_irq[CURRENT_CPU_INDEX()]);
-    SYSTEM_WRITE_WORD(ICC_DIR_EL1, active_irq[CURRENT_CPU_INDEX()]);
     active_irq[CURRENT_CPU_INDEX()] = IRQ_NONE;
 
 }
