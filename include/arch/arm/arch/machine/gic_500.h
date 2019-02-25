@@ -23,6 +23,7 @@
 #include <linker.h>
 #include <mode/smp/smp.h>
 #include <model/statedata.h>
+#include <armv/machine.h>
 
 typedef uint16_t interrupt_t;
 typedef uint16_t irq_t;
@@ -72,13 +73,6 @@ enum irqNumbers {
 #define GICC_CTLR_EL1_EOImode_drop   (1U << 1)
 
 #define DEFAULT_PMR_VALUE            0xff
-
-#define MRS(reg, v)  asm volatile("mrs %0," reg : "=r"(v))
-#define MSR(reg, v)                                \
-   do {                                           \
-       word_t _v = v;                             \
-       asm volatile("msr " reg ",%0" :: "r" (_v));\
-   }while(0)
 
 /* System registers for GIC CPU interface */
 #define ICC_IAR1_EL1    "S3_0_C12_C12_0"
@@ -273,8 +267,8 @@ getActiveIRQ(void)
     uint32_t irq;
 
     if (!IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
-        uint32_t val;
-        MRS(ICC_IAR1_EL1, val);
+        uint32_t val = 0;
+        SYSTEM_READ_WORD(ICC_IAR1_EL1, val);
         active_irq[CURRENT_CPU_INDEX()] = val;
     }
 
@@ -295,9 +289,9 @@ getActiveIRQ(void)
 static inline bool_t
 isIRQPending(void)
 {
-    uint32_t val;
+    uint32_t val = 0;
     /* Check for pending IRQs in group 1: ICC_HPPIR1_EL1 */
-    MRS(ICC_HPPIR1_EL1, val);
+    SYSTEM_READ_WORD(ICC_HPPIR1_EL1, val);
     return IS_IRQ_VALID(val);
 }
 
@@ -320,8 +314,8 @@ ackInterrupt(irq_t irq)
     }
 
     /* Set End of Interrupt for active IRQ: ICC_EOIR1_EL1 */
-    MSR(ICC_EOIR1_EL1, active_irq[CURRENT_CPU_INDEX()]);
-    MSR(ICC_DIR_EL1, active_irq[CURRENT_CPU_INDEX()]);
+    SYSTEM_WRITE_WORD(ICC_EOIR1_EL1, active_irq[CURRENT_CPU_INDEX()]);
+    SYSTEM_WRITE_WORD(ICC_DIR_EL1, active_irq[CURRENT_CPU_INDEX()]);
     active_irq[CURRENT_CPU_INDEX()] = IRQ_NONE;
 
 }

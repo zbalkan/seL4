@@ -85,13 +85,13 @@ static void gicv3_redist_wait_for_rwp(void)
 
 static void gicv3_enable_sre(void)
 {
-    uint32_t val;
+    uint32_t val = 0;
 
     /* ICC_SRE_EL1 */
-    MRS(ICC_SRE_EL1, val);
+    SYSTEM_READ_WORD(ICC_SRE_EL1, val);
     val |= GICC_SRE_EL1_SRE;
 
-    MSR(ICC_SRE_EL1, val);
+    SYSTEM_WRITE_WORD(ICC_SRE_EL1, val);
     isb();
 }
 
@@ -242,16 +242,16 @@ cpu_iface_init(void)
     gicv3_enable_sre();
 
     /* No priority grouping: ICC_BPR1_EL1 */
-    MSR(ICC_BPR1_EL1, 0);
+    SYSTEM_WRITE_WORD(ICC_BPR1_EL1, 0);
 
     /* Set priority mask register: ICC_PMR_EL1 */
-    MSR(ICC_PMR_EL1, DEFAULT_PMR_VALUE);
+    SYSTEM_WRITE_WORD(ICC_PMR_EL1, DEFAULT_PMR_VALUE);
 
     /* EOI drops priority, DIR deactivates the interrupt (mode 1): ICC_CTLR_EL1 */
-    MSR(ICC_CTLR_EL1, GICC_CTLR_EL1_EOImode_drop);
+    SYSTEM_WRITE_WORD(ICC_CTLR_EL1, GICC_CTLR_EL1_EOImode_drop);
 
     /* Enable Group1 interrupts: ICC_IGRPEN1_EL1 */
-    MSR(ICC_IGRPEN1_EL1, 1);
+    SYSTEM_WRITE_WORD(ICC_IGRPEN1_EL1, 1);
 
     /* Sync at once at the end of cpu interface configuration */
     isb();
