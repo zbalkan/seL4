@@ -52,16 +52,16 @@ enum irqNumbers {
 /* Setters/getters helpers */
 #define IRQ_REG(IRQ) ((IRQ) >> 5u)
 #define IRQ_BIT(IRQ) ((IRQ) & 0x1f)
-#define IRQ_MASK MASK(10u)
+#define IRQ_MASK MASK(16u)
 #define IS_IRQ_VALID(X) (((X) & IRQ_MASK) < SPECIAL_IRQ_START)
 
 /* Register bits */
 #define GICD_CTL_ENABLE 0x1
-#define GICD_CTLR_RWP                (1UL << 31)
-#define GICD_CTLR_ARE_NS             (1U << 4)
-#define GICD_CTLR_ENABLE_G1NS         (1U << 1)
-#define GICD_CTLR_ENABLE_G0          (1U << 0)
-#define GICD_IROUTER_SPI_MODE_ANY    (1UL << 31)
+#define GICD_CTLR_RWP                BIT(31)
+#define GICD_CTLR_ARE_NS             BIT(4)
+#define GICD_CTLR_ENABLE_G1NS         BIT(1)
+#define GICD_CTLR_ENABLE_G0          BIT(0)
+#define GICD_IROUTER_SPI_MODE_ANY    BIT(31)
 
 /* Common between GICD_PIDR2 and GICR_PIDR2 */
 #define GIC_PIDR2_ARCH_MASK         (0xf0)
@@ -70,12 +70,12 @@ enum irqNumbers {
 
 #define GICD_TYPE_LINESNR 0x01f
 
-#define GICC_SRE_EL1_SRE             (1UL << 0)
+#define GICC_SRE_EL1_SRE             BIT(0)
 
-#define GICR_WAKER_ProcessorSleep    (1U << 1)
-#define GICR_WAKER_ChildrenAsleep    (1U << 2)
+#define GICR_WAKER_ProcessorSleep    BIT(1)
+#define GICR_WAKER_ChildrenAsleep    BIT(2)
 
-#define GICC_CTLR_EL1_EOImode_drop   (1U << 1)
+#define GICC_CTLR_EL1_EOImode_drop   BIT(1)
 
 #define DEFAULT_PMR_VALUE            0xff
 
@@ -242,7 +242,7 @@ is_irq_edge_triggered(irq_t irq)
 }
 
 static inline void
-dist_pending_clr(irq_t irq)
+gic_pending_clr(irq_t irq)
 {
     int word = IRQ_REG(irq);
     int bit = IRQ_BIT(irq);
@@ -256,7 +256,7 @@ dist_pending_clr(irq_t irq)
 }
 
 static inline void
-dist_enable_clr(irq_t irq)
+gic_enable_clr(irq_t irq)
 {
     int word = IRQ_REG(irq);
     int bit = IRQ_BIT(irq);
@@ -270,7 +270,7 @@ dist_enable_clr(irq_t irq)
 }
 
 static inline void
-dist_enable_set(irq_t irq)
+gic_enable_set(irq_t irq)
 {
     int word = IRQ_REG(irq);
     int bit = IRQ_BIT(irq);
@@ -321,9 +321,9 @@ static inline void
 maskInterrupt(bool_t disable, interrupt_t irq)
 {
     if (disable) {
-        dist_enable_clr(irq);
+        gic_enable_clr(irq);
     } else {
-        dist_enable_set(irq);
+        gic_enable_set(irq);
     }
 }
 
@@ -332,7 +332,7 @@ ackInterrupt(irq_t irq)
 {
     assert(IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()]) && (active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK) == irq);
     if (is_irq_edge_triggered(irq)) {
-        dist_pending_clr(irq);
+        gic_pending_clr(irq);
     }
 
     /* Set End of Interrupt for active IRQ: ICC_EOIR1_EL1 */

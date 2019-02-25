@@ -14,7 +14,7 @@
 #include <types.h>
 #include <arch/machine/gic_500.h>
 
-#define IRQ_SET_ALL 0xffffffff;
+#define IRQ_SET_ALL 0xffffffff
 
 #define RDIST_BANK_SZ 0x00010000
 
@@ -107,10 +107,13 @@ dist_init(void)
 
     /* Disable GIC Distributor */
     gic_dist->ctlr = 0;
+    gicv3_dist_wait_for_rwp();
+
     type = gic_dist->typer;
 
     nr_lines = GIC_REG_WIDTH * ((type & GICD_TYPE_LINESNR) + 1);
 
+    /* Assume level-triggered */
     for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 16 ) {
         gic_dist->config[(i / 16)] = 0;
     }
@@ -127,9 +130,9 @@ dist_init(void)
         gic_dist->pending_clr[(i / 32)] = IRQ_SET_ALL;
     }
 
-    gicv3_dist_wait_for_rwp();
     /* Turn on the distributor */
     gic_dist->ctlr = GICD_CTL_ENABLE | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1NS | GICD_CTLR_ENABLE_G0;
+    gicv3_dist_wait_for_rwp();
 
     /* Route all global IRQs to this CPU */
     SYSTEM_READ_WORD("mpidr_el1", affinity);
@@ -215,6 +218,9 @@ cpu_iface_init(void)
         return;
     }
 
+    /* Deactivate SGIs/PPIs */
+    gic_rdist_sgi_ppi->icactiver0 = ~0;
+
     /* Set priority on PPI and SGI interrupts */
     priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
                 GIC_PRI_IRQ);
@@ -227,7 +233,10 @@ cpu_iface_init(void)
      * enabled.
      */
     gic_rdist_sgi_ppi->icenabler0 = 0xffff0000;
-    gic_rdist_sgi_ppi->icenabler0 = 0x0000ffff;
+    gic_rdist_sgi_ppi->isenabler0 = 0x0000ffff;
+
+    /* Set ICFGR1 for PPIs as level-triggered */
+    gic_rdist_sgi_ppi->icfgrn_rw = 0x0;
 
     gicv3_redist_wait_for_rwp();
 
