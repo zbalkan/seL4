@@ -103,6 +103,7 @@ dist_init(void)
     uint32_t type;
     unsigned int nr_lines;
     uint64_t affinity;
+    uint32_t priority;
 
     /* Disable GIC Distributor */
     gic_dist->ctlr = 0;
@@ -115,12 +116,10 @@ dist_init(void)
     }
 
     /* Default priority for global interrupts */
+    priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
+                GIC_PRI_IRQ);
     for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 4 ) {
-        if (config_set(CONFIG_ARM_HYPERVISOR_SUPPORT)) {
-            gic_dist->priority[(i / 4)] = 0x80808080;
-        } else {
-            gic_dist->priority[(i / 4)] = 0x0;
-        }
+        gic_dist->priority[(i / 4)] = priority;
     }
     /* Disable and clear all global interrupts */
     for ( i = NR_GIC_LOCAL_IRQS; i < nr_lines; i += 32 ) {
@@ -217,12 +216,6 @@ cpu_iface_init(void)
     }
 
     /* Set priority on PPI and SGI interrupts */
-    priority = (GIC_PRI_IPI << 24 | GIC_PRI_IPI << 16 | GIC_PRI_IPI << 8 |
-                GIC_PRI_IPI);
-    for (i = 0; i < NR_GIC_SGI; i += 4) {
-        gic_rdist_sgi_ppi->ipriorityrn[i / 4] = priority;
-    }
-
     priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
                 GIC_PRI_IRQ);
     for (i = 0; i < NR_GIC_LOCAL_IRQS; i += 4) {

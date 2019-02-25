@@ -47,7 +47,6 @@ enum irqNumbers {
 
 #define GIC_PRI_LOWEST     0xf0
 #define GIC_PRI_IRQ        0xa0
-#define GIC_PRI_IPI        0x90 /* IPIs must preempt normal interrupts */
 #define GIC_PRI_HIGHEST    0x80 /* Higher priorities belong to Secure-World */
 
 /* Setters/getters helpers */
