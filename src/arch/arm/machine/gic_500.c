@@ -146,7 +146,7 @@ static void gicv3_enable_sre(void)
 
      gicv3_dist_wait_for_rwp();
      /* Turn on the distributor */
-     gic_dist->ctlr = GICD_CTL_ENABLE | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1A | GICD_CTLR_ENABLE_G1;
+     gic_dist->ctlr = GICD_CTL_ENABLE | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1NS | GICD_CTLR_ENABLE_G0;
 
      /* Route all global IRQs to this CPU */
      SYSTEM_READ_WORD("mpidr_el1", affinity);

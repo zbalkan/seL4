@@ -53,8 +53,8 @@ enum irqNumbers {
 #define GICD_CTL_ENABLE 0x1
 #define GICD_CTLR_RWP                (1UL << 31)
 #define GICD_CTLR_ARE_NS             (1U << 4)
-#define GICD_CTLR_ENABLE_G1A         (1U << 1)
-#define GICD_CTLR_ENABLE_G1          (1U << 0)
+#define GICD_CTLR_ENABLE_G1NS         (1U << 1)
+#define GICD_CTLR_ENABLE_G0          (1U << 0)
 #define GICD_IROUTER_SPI_MODE_ANY    (1UL << 31)
 
 /* Common between GICD_PIDR2 and GICR_PIDR2 */
