@@ -11,7 +11,7 @@
 #ifndef __PLAT_MACHINE_H
 #define __PLAT_MACHINE_H
 
-#include <arch/machine/gic_pl390.h>
+#include <arch/machine/gic_v2.h>
 
 enum IRQConstants {
     maxIRQ = 122

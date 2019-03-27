@@ -15,6 +15,6 @@ enum IRQConstants {
     maxIRQ = 92
 } platform_interrupt_t;
 
-#include <arch/machine/gic_pl390.h>
+#include <arch/machine/gic_v2.h>
 
 #endif /* !__PLAT_MACHINE_H */

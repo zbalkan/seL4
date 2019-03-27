@@ -22,6 +22,6 @@ enum IRQConstants {
 
 compile_assert(interuppt_mapping_check, (maxIRQ == (32 + 288 + 64 - 1)))
 
-#include <arch/machine/gic_pl390.h>
+#include <arch/machine/gic_v2.h>
 
 #endif  /* ! __PLAT_MACHINE_H */

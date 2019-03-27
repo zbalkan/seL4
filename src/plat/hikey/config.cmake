@@ -78,5 +78,5 @@ endif()
 
 add_sources(
     DEP "KernelPlatformHikey"
-    CFILES src/arch/arm/machine/gic_pl390.c src/arch/arm/machine/l2c_nop.c
+    CFILES src/arch/arm/machine/gic_v2.c src/arch/arm/machine/l2c_nop.c
 )
