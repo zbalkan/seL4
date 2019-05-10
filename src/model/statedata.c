@@ -56,9 +56,11 @@ UP_STATE_DEFINE(tcb_t *, ksDebugTCBs);
  * pending interrupts */
 word_t ksWorkUnitsCompleted;
 
-/* CNode containing interrupt handler endpoints */
 irq_state_t intStateIRQTable[maxIRQ + 1];
-cte_t *intStateIRQNode;
+/* CNode containing interrupt handler endpoints - like all seL4 objects, this CNode needs to be
+ * of a size that is a power of 2 and aligned to its size. */
+cte_t intStateIRQNode[BIT(IRQ_CNODE_SLOT_BITS)] ALIGN(BIT(IRQ_CNODE_SLOT_BITS + seL4_SlotBits));
+compile_assert(irqCNodeSize, sizeof(intStateIRQNode) >= ((maxIRQ + 1) *sizeof(cte_t)));
 
 /* Currently active domain */
 dom_t ksCurDomain;
@@ -71,6 +73,9 @@ word_t ksDomScheduleIdx;
 
 /* Only used by lockTLBEntry */
 word_t tlbLockCount = 0;
+
+/* Idle thread. */
+SECTION("._idle_thread") char ksIdleThreadTCB[CONFIG_MAX_NUM_NODES][BIT(seL4_TCBBits)] ALIGN(BIT(TCB_SIZE_BITS));
 
 #if (defined CONFIG_DEBUG_BUILD || defined CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
 kernel_entry_t ksKernelEntry;

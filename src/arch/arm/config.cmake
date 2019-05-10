@@ -73,9 +73,21 @@ function(declare_default_headers)
         0
         CONFIGURE
         ""
-        "TIMER_FREQUENCY;MAX_IRQ;INTERRUPT_CONTROLLER;TIMER"
+        "TIMER_FREQUENCY;MAX_IRQ;INTERRUPT_CONTROLLER;TIMER;SMMU"
         ""
     )
+    # calculate the irq cnode size based on MAX_IRQ
+    set(BITS "0")
+    set(MAX "${CONFIGURE_MAX_IRQ}")
+    while(MAX GREATER "0")
+        math(EXPR BITS "${BITS} + 1")
+        math(EXPR MAX "${MAX} >> 1")
+    endwhile()
+    math(EXPR SLOTS "1 << ${BITS}")
+    if("${SLOTS}" LESS "${CONFIGURE_MAX_IRQ}")
+        math(EXPR BITS "${BITS} + 1")
+    endif()
+    set(CONFIGURE_IRQ_SLOT_BITS "${BITS}")
     # variables parsed by the above will be prepended with CONFIGURE_, so pipe them
     # straight to configure_file
     configure_file(
@@ -136,22 +148,19 @@ if(DEFINED KernelDTSList)
         message(FATAL_ERROR "Cannot find 'dtc' program.")
     endif()
 
+    # Generate final DTS based on Linux DTS + seL4 overlay[s]
     foreach(entry ${KernelDTSList})
         get_absolute_source_or_binary(dts_tmp ${entry})
-        set(dts_list "${dts_list} ${dts_tmp}")
+        list(APPEND dts_list "${dts_tmp}")
     endforeach()
 
-    # Generate final DTS based on Linux DTS + seL4 overlay[s]
-    execute_process(
-        COMMAND
-            ${CMAKE_COMMAND} -E make_directory
-            "${CMAKE_CURRENT_BINARY_DIR}/gen_headers/plat/machine/"
-    )
-    execute_process(COMMAND bash -c "cat ${dts_list} > ${KernelDTSIntermediate}.in")
-    configure_file(${KernelDTSIntermediate}.in ${KernelDTSIntermediate} COPYONLY)
-
-    check_outfile_stale(regen ${KernelDTBPath} KernelDTSIntermediate)
+    check_outfile_stale(regen ${KernelDTBPath} dts_list ${CMAKE_CURRENT_BINARY_DIR}/dts.cmd)
     if(regen)
+        file(REMOVE "${KernelDTSIntermediate}")
+        foreach(entry ${dts_list})
+            file(READ ${entry} CONTENTS)
+            file(APPEND "${KernelDTSIntermediate}" "${CONTENTS}")
+        endforeach()
         # Compile DTS to DTB
         execute_process(
             COMMAND
@@ -160,10 +169,11 @@ if(DEFINED KernelDTSList)
     endif()
 
     set(deps ${KernelDTBPath} ${config_file} ${config_schema} ${HARDWARE_GEN_PATH})
-    check_outfile_stale(regen ${device_dest} deps)
+    check_outfile_stale(regen ${device_dest} deps ${CMAKE_CURRENT_BINARY_DIR}/gen_header.cmd)
     if(regen)
         # Generate devices_gen header based on DTB
         message(STATUS "${device_dest} is out of date. Regenerating...")
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_headers/plat/machine/")
         execute_process(
             COMMAND
                 ${PYTHON} "${HARDWARE_GEN_PATH}" --dtb "${KernelDTBPath}" --compatibility-strings

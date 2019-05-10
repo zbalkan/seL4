@@ -22,8 +22,6 @@
 #include <util.h>
 
 /* (node-local) state accessed only during bootstrapping */
-#define IRQ_CNODE_BITS (seL4_WordBits - clzl(maxIRQ * sizeof(cte_t)))
-
 ndks_boot_t ndks_boot BOOT_DATA;
 
 BOOT_CODE bool_t insert_region(region_t reg)
@@ -160,22 +158,6 @@ create_root_cnode(void)
     return cap;
 }
 
-
-BOOT_CODE bool_t create_irq_cnode(void)
-{
-    pptr_t pptr;
-    assert(BIT(IRQ_CNODE_BITS - seL4_SlotBits) > maxIRQ);
-    /* create an empty IRQ CNode */
-    pptr = alloc_region(IRQ_CNODE_BITS);
-    if (!pptr) {
-        printf("Kernel init failing: could not create irq cnode\n");
-        return false;
-    }
-    memzero((void *)pptr, 1 << IRQ_CNODE_BITS);
-    intStateIRQNode = (cte_t *)pptr;
-    return true;
-}
-
 /* Check domain scheduler assumptions. */
 compile_assert(num_domains_valid,
                CONFIG_NUM_DOMAINS >= 1 && CONFIG_NUM_DOMAINS <= 256)
@@ -243,7 +225,14 @@ BOOT_CODE region_t allocate_extra_bi_region(word_t extra_size)
             0x1000, 0x1000
         };
     }
-    word_t size_bits = seL4_WordBits - 1 - clzl(ROUND_UP(extra_size, seL4_PageBits));
+
+    word_t clzl_ret = clzl(ROUND_UP(extra_size, seL4_PageBits));
+    /* If region is bigger than a page, make sure we overallocate rather than underallocate */
+    if (extra_size & ((1 << clzl_ret) - 1)) {
+        clzl_ret--;
+    }
+    word_t size_bits = seL4_WordBits - 1 - clzl_ret;
+
     pptr_t pptr = alloc_region(size_bits);
     if (!pptr) {
         printf("Kernel init failed: could not allocate extra bootinfo region size bits %lu\n", size_bits);
@@ -367,12 +356,7 @@ BOOT_CODE bool_t create_idle_thread(void)
 #ifdef ENABLE_SMP_SUPPORT
     for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
 #endif /* ENABLE_SMP_SUPPORT */
-        pptr = alloc_region(seL4_TCBBits);
-        if (!pptr) {
-            printf("Kernel init failed: Unable to allocate tcb for idle thread\n");
-            return false;
-        }
-        memzero((void *)pptr, 1 << seL4_TCBBits);
+        pptr = (pptr_t) &ksIdleThreadTCB[SMP_TERNARY(i, 0)];
         NODE_STATE_ON_CORE(ksIdleThread, i) = TCB_PTR(pptr + TCB_OFFSET);
         configureIdleThread(NODE_STATE_ON_CORE(ksIdleThread, i));
 #ifdef CONFIG_DEBUG_BUILD
