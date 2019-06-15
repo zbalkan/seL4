@@ -8,6 +8,8 @@
   @TAG(GD_GPL)
 -->
 
+[![DepShield Badge](https://depshield.sonatype.org/badges/zbalkan/seL4/depshield.svg)](https://depshield.github.io)
+
 The seL4 Repository
 ===================
 
